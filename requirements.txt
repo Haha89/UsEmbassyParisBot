@@ -1,0 +1,5 @@
+selenium
+requests
+python-dotenv
+selenium-wire
+pydantic
