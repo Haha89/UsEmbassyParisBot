@@ -55,12 +55,14 @@ def run():
     browser.get(f"{BASE_URL}niv/schedule/{environ.get('APPOINTMENT')}/appointment")  # Retrieve availabilities
     body = [r for r in browser.requests if r.response and r.url.endswith("[expedite]=false")][0].response.body
     browser.close()
+    current_date, msg = datetime.strptime(environ.get("CURRENT"), "%Y-%m-%d").date(), "No availabilities"
+    if body := json.loads(body):
+        warning("Computing first availability")
+        best_date = min([a.date for a in AppointmentAvailableList(__root__=body).__root__ if a.business_day])
+        msg = f"{'' if best_date < current_date else 'No '}Earlier date found: {best_date.strftime('%d %b')}"
 
-    warning("Computing first availability")
-    best_date = min([a.date for a in AppointmentAvailableList(__root__=json.loads(body)).__root__ if a.business_day])
-    if best_date < datetime.strptime(environ.get("CURRENT"), "%Y-%m-%d").date():
-        send_text(f"Earlier date found: {best_date.strftime('%d %b')}")
-    warning(f"Shutting down. Best date {best_date.strftime('%d %b')}")
+    send_text(msg)
+    warning(f"Shutting down. {msg}")
 
 
 if __name__ == "__main__":
