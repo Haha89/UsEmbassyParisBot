@@ -1,6 +1,7 @@
 import json
 import time
 from datetime import date, datetime
+from logging import basicConfig, warning
 from os import environ
 from typing import List
 
@@ -14,28 +15,33 @@ from seleniumwire import webdriver
 
 BASE_URL = "https://ais.usvisa-info.com/en-fr/"
 load_dotenv(find_dotenv())
+FORMAT = '%(asctime)s: %(message)s'
+basicConfig(format=FORMAT)
 
 
 class AppointmentAvailable(BaseModel):
     date: date
     business_day: bool
 
-    def __str__(self):
-        return f"Apt {self.date.isoformat()} - {'Open' if self.business_day else 'Holiday'}"
-
 
 class AppointmentAvailableList(BaseModel):
     __root__: List[AppointmentAvailable]
 
-    def __str__(self):
-        return '\n'.join(map(str, self.__root__))
+
+def send_text(bot_message):
+    requests.get(f'https://api.telegram.org/bot{environ.get("TELEGRAM_TOKEN")}/sendMessage?chat_id='
+                 f'{environ.get("TELEGRAM_HASH")}&parse_mode=Markdown&text={bot_message}')
 
 
 def run():
+    warning("Bot starting")
     options = Options()
     options.add_argument('--headless')
+    options.add_argument('ignore-certificate-errors')
+    options.add_argument("--log-level=3")
     browser = webdriver.Chrome(executable_path="./chromedriver.exe", options=options)
 
+    warning("Login initiated")
     WebDriverWait(browser, 7)
     browser.get(f"{BASE_URL}niv/users/sign_in")
     browser.find_element(by=By.CLASS_NAME, value="down-arrow").click()
@@ -44,25 +50,17 @@ def run():
     browser.find_element(by=By.ID, value="user_password").send_keys(environ.get("PASSWORD"))
     browser.find_element(by=By.CLASS_NAME, value="icheckbox").click()  # Click Approve terms
     browser.find_element(by=By.NAME, value="commit").click()  # Click Submit to log in
-    time.sleep(2)
+    time.sleep(1)
+    warning("Login done. Fetching availabilities")
     browser.get(f"{BASE_URL}niv/schedule/{environ.get('APPOINTMENT')}/appointment")  # Retrieve availabilities
-
-    body = None
-    for request in browser.requests:
-        if request.response and request.url.endswith("[expedite]=false"):
-            body = request.response.body
+    body = [r for r in browser.requests if r.response and r.url.endswith("[expedite]=false")][0].response.body
     browser.close()
-    if not body:
-        print("Error: no http request found")
 
+    warning("Computing first availability")
     best_date = min([a.date for a in AppointmentAvailableList(__root__=json.loads(body)).__root__ if a.business_day])
     if best_date < datetime.strptime(environ.get("CURRENT"), "%Y-%m-%d").date():
-        send_text(f"Alert: date found {best_date}")
-
-
-def send_text(bot_message):
-    requests.get(f'https://api.telegram.org/bot{environ.get("TELEGRAM_TOKEN")}/sendMessage?chat_id='
-                 f'{environ.get("TELEGRAM_HASH")}&parse_mode=Markdown&text={bot_message}')
+        send_text(f"Earlier date found: {best_date.strftime('%d %b')}")
+    warning(f"Shutting down. Best date {best_date.strftime('%d %b')}")
 
 
 if __name__ == "__main__":
