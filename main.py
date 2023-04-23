@@ -35,6 +35,7 @@ def send_text(bot_message):
 
 def run():
     warning("Bot starting")
+    current_date, msg, body = datetime.strptime(environ.get("CURRENT"), "%Y-%m-%d").date(), "No availabilities", []
     options = Options()
     options.add_argument('--headless')
     options.add_argument('ignore-certificate-errors')
@@ -53,17 +54,24 @@ def run():
     time.sleep(1)
     warning("Login done. Fetching availabilities")
     browser.get(f"{BASE_URL}niv/schedule/{environ.get('APPOINTMENT')}/appointment")  # Retrieve availabilities
-    body = [r for r in browser.requests if r.response and r.url.endswith("[expedite]=false")][0].response.body
+    http_calls = [r for r in browser.requests if r.response and r.url.endswith("[expedite]=false")]
     browser.close()
-    current_date, msg = datetime.strptime(environ.get("CURRENT"), "%Y-%m-%d").date(), "No availabilities"
-    if body := json.loads(body):
-        warning("Computing first availability")
-        best_date = min([a.date for a in AppointmentAvailableList(__root__=body).__root__ if a.business_day])
-        msg = f"{'' if best_date < current_date else 'No '}Earlier date found: {best_date.strftime('%d %b')}"
+    if http_calls:
+        body = json.loads(http_calls[0].response.body)
+        if body:
+            warning("Computing first availability")
+            best_date = min([a.date for a in AppointmentAvailableList(__root__=body).__root__ if a.business_day])
+            if best_date < current_date:
+                send_text(f"Earlier date found: {best_date.strftime('%d %b')}")
+    else:
+        send_text("No HTTP request matching expectations. Please investigate")
 
-    send_text(msg)
     warning(f"Shutting down. {msg}")
 
 
 if __name__ == "__main__":
-    run()
+    try:
+        run()
+    except Exception as e:
+        print(e)
+        send_text("Error happened. Please check")
