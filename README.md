@@ -13,15 +13,16 @@ easily.
     3) APPOINTMENT: appointment number (ex 48415831). You'll find it in the url when you use the website
     4) CURRENT: your current appointment date (YYYY-MM-DD). The bot will notify you only if an earlier availability
        appears.
-    5) TELEGRAM_HASH: the id of the telegram conversation to right the alert on
-    6) TELEGRAM_TOKEN: the token to allow the bot to send messages on the chat
+    5) TELEGRAM_HASH: the id of the telegram conversation to right the alert on  (OPTIONAL)
+    6) TELEGRAM_TOKEN: the token to allow the bot to send messages on the chat  (OPTIONAL)
 4) Add a task scheduler to run every hour or execute manually `main.py`
 5) Wait for an alert and book it as quickly as possible
 
-# Telegram information
+# Telegram information (Optional)
 
 If you don't know how to set up the telegram bot to notify you, follow this
-link: https://core.telegram.org/api#getting-started
+link: https://core.telegram.org/api#getting-started.
+Feel free to remove the telegram part if you do not want to be notified by telegram.
 
 # Task scheduler
 Create a Windows scheduled task to run every hour; 
