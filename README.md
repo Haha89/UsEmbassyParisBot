@@ -22,6 +22,7 @@ easily.
 
 If you don't know how to set up the telegram bot to notify you, follow this
 link: https://core.telegram.org/api#getting-started.
+
 Feel free to remove the telegram part if you do not want to be notified by telegram.
 
 # Task scheduler
