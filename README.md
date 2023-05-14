@@ -1,6 +1,6 @@
 ## US Ambassy in Paris bot
 
-Allows to retrieve availabilities from the [US embassy in Paris](https://ais.usvisa-info.com/en-fr/ ) and notify you
+Allows to retrieve availabilities from the [US embassy](https://ais.usvisa-info.com/en-fr/ ) and notify you
 easily.
 
 # Setup
