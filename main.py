@@ -1,7 +1,7 @@
 import json
 import time
 from datetime import date, datetime
-from logging import basicConfig, warning
+from logging import basicConfig, warning, info
 from os import environ
 from typing import List
 
@@ -12,6 +12,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from seleniumwire import webdriver
+from webdriver_manager.chrome import ChromeDriverManager
 
 BASE_URL = "https://ais.usvisa-info.com/en-fr/"
 load_dotenv(find_dotenv())
@@ -40,7 +41,9 @@ def run():
     options.add_argument('--headless')
     options.add_argument('ignore-certificate-errors')
     options.add_argument("--log-level=3")
-    browser = webdriver.Chrome(executable_path="./chromedriver.exe", options=options)
+
+    # Automatically download and install Chromedriver
+    browser = webdriver.Chrome(ChromeDriverManager().install(), options=options)
 
     warning("Login initiated")
     WebDriverWait(browser, 7)
@@ -54,19 +57,27 @@ def run():
     time.sleep(1)
     warning("Login done. Fetching availabilities")
     browser.get(f"{BASE_URL}niv/schedule/{environ.get('APPOINTMENT')}/appointment")  # Retrieve availabilities
+    browser.find_element(by=By.NAME, value="commit").click()  # Confirm it's for 2 people
+    time.sleep(1)
     http_calls = [r for r in browser.requests if r.response and r.url.endswith("[expedite]=false")]
-    browser.close()
     if http_calls:
         body = json.loads(http_calls[0].response.body)
         if body:
-            warning("Computing first availability")
-            best_date = min([a.date for a in AppointmentAvailableList(__root__=body).__root__ if a.business_day])
-            if best_date < current_date:
-                send_text(f"Earlier date found: {best_date.strftime('%d %b')}")
+            dates = [
+                a.date for a in AppointmentAvailableList(__root__=body).__root__
+                if date(2024, 3, 1) <= a.date < date(2024, 3, 29) or date(2024, 7, 15) <= a.date < date(2024, 9, 1)
+            ]
+            if dates:
+                warning(f"Dates found: {dates}")
+                send_text(f"Earlier date found! {dates}")
+            else:
+                warning(f"No matching dates found")
     else:
+        warning(f"No HTTP request matching expectations. Please investigate")
         send_text("No HTTP request matching expectations. Please investigate")
 
     warning(f"Shutting down. {msg}")
+    browser.close()
 
 
 if __name__ == "__main__":
