@@ -3,3 +3,4 @@ requests
 python-dotenv
 selenium-wire
 pydantic
+webdriver_manager
